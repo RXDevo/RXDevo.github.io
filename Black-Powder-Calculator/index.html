@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Material Ratio Calculator</title>
+  <title>Black Powder Ratio Calculator</title>
   <meta name="description" content="Calculate required grams of each material based on ratio percentages." />
 
   <style>
@@ -24,6 +24,7 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Ubuntu, Arial, sans-serif;
       color: var(--fg);
       background: linear-gradient(180deg, #f0f7ff, #fff);
+      transition: background 0.3s ease, color 0.3s ease;
     }
 
     header { padding:2rem 1rem; text-align:center }
@@ -41,6 +42,7 @@
       border-radius:18px;
       box-shadow:0 10px 30px rgba(2,6,23,.12);
       padding:1rem;
+      transition: background 0.3s ease, color 0.3s ease;
     }
 
     label { font-weight:600; display:block; margin:.5rem 0 .25rem }
@@ -48,6 +50,7 @@
       width:100%; padding:.7rem;
       border:1px solid #e2e8f0; border-radius:12px;
       font-size:1rem; background:#fff;
+      transition: background 0.3s ease, color 0.3s ease;
     }
     input[type="number"]:focus {
       outline:3px solid rgba(37,99,235,.15); border-color:var(--accent);
@@ -63,6 +66,7 @@
       padding:.7rem 1rem;
       font-weight:700;
       cursor:pointer;
+      transition: background 0.3s ease, color 0.3s ease;
     }
 
     .primary { background:var(--accent); color:#fff }
@@ -85,9 +89,8 @@
     footer { padding:2rem 1rem; text-align:center; color:var(--muted) }
     .small { font-size:.9rem }
 
-    .back-btn {
+    .back-btn, .theme-btn {
       position: fixed;
-      top: 15px;
       right: 20px;
       font-size: 22px;
       font-weight: bold;
@@ -97,21 +100,69 @@
       padding: 6px 14px;
       border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      transition: background 0.3s ease, transform 0.2s ease;
+      transition: background 0.3s ease, transform 0.2s ease, color 0.3s ease;
+      user-select: none;
     }
-    .back-btn:hover {
+    .back-btn { top: 15px; }
+    .theme-btn { top: 60px; cursor: pointer; }
+
+    .back-btn:hover, .theme-btn:hover {
       background: #f1f5f9;
       transform: translateY(-2px);
+    }
+
+    /* DARK THEME STYLES */
+    body.dark {
+      --fg:#ffffff;
+      --muted:#9ca3af;
+      --bg:#0a0a0a;
+      --card:#1a1a1a;
+      --accent:#ffffff;
+      background: #000000;
+      color: #ffffff;
+    }
+
+    body.dark input[type="number"] {
+      background:#0f0f0f;
+      border:1px solid #333;
+      color:#fff;
+    }
+
+    body.dark .card {
+      background:#1a1a1a;
+      box-shadow:0 10px 30px rgba(0,0,0,.6);
+    }
+
+    body.dark .primary { background:#333; color:#fff; }
+    body.dark .secondary { background:#222; color:#fff; }
+    body.dark .preview, body.dark .result {
+      background:#111;
+      border:1px dashed #333;
+      color:#fff;
+    }
+    body.dark .result {
+      background:#111;
+      border:1px solid #333;
+    }
+    body.dark .back-btn, body.dark .theme-btn {
+      background:#1a1a1a;
+      color:#fff;
+      box-shadow:0 2px 6px rgba(255,255,255,0.05);
+    }
+    body.dark .back-btn:hover, body.dark .theme-btn:hover {
+      background:#2a2a2a;
     }
   </style>
 </head>
 
 <body>
+  <!-- Buttons -->
   <a href="#" class="back-btn">&lt;</a>
+  <div class="theme-btn" id="themeToggle">☾</div>
 
   <header>
-    <h1>Material Ratio Calculator</h1>
-    <div class="sub">Calculate required grams for each component (75% PSNT , 15% CC , 10% S)</div>
+    <h1>Black Powder Ratio Calculator</h1>
+    <div class="sub">Calculate required grams for each component (75% Pottasium Nitrate, 15% Charcoal , 10% Sulfur)</div>
   </header>
 
   <div class="container grid">
@@ -120,16 +171,16 @@
 
       <div class="row">
         <div>
-          <label for="psnt">75% PSNT (grams)</label>
-          <input id="psnt" type="number" step="any" placeholder="Enter grams for PSNT" />
+          <label for="psnt">75% Pottasium Nitrate (grams)</label>
+          <input id="psnt" type="number" step="any" placeholder="Enter grams for Pottasium Nitrate" />
         </div>
         <div>
-          <label for="cc">15% CC (grams)</label>
-          <input id="cc" type="number" step="any" placeholder="Enter grams for CC" />
+          <label for="cc">15% Charcoal (grams)</label>
+          <input id="cc" type="number" step="any" placeholder="Enter grams for Charcoal" />
         </div>
         <div>
-          <label for="s">10% S (grams)</label>
-          <input id="s" type="number" step="any" placeholder="Enter grams for S" />
+          <label for="s">10% Sulfur (grams)</label>
+          <input id="s" type="number" step="any" placeholder="Enter grams for Sulfur" />
         </div>
       </div>
 
@@ -183,9 +234,9 @@
       out.innerHTML = `
         <div class="result">
           <strong>Total Mixture:</strong> ${totalMass.toFixed(3)} g<br><br>
-          <strong>75% PSNT:</strong> ${psntMass.toFixed(3)} g<br>
-          <strong>15% CC:</strong> ${ccMass.toFixed(3)} g<br>
-          <strong>10% S:</strong> ${sMass.toFixed(3)} g
+          <strong>75% Pottasium Nitrate:</strong> ${psntMass.toFixed(3)} g<br>
+          <strong>15% Charcoal:</strong> ${ccMass.toFixed(3)} g<br>
+          <strong>10% Sulfur:</strong> ${sMass.toFixed(3)} g
         </div>
       `;
     };
@@ -197,6 +248,12 @@
 
     $('#calcBtn').addEventListener('click', calc);
     $('#clearBtn').addEventListener('click', clearAll);
+
+    // Theme toggle
+    $('#themeToggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      $('#themeToggle').textContent = document.body.classList.contains('dark') ? '☀' : '☾';
+    });
   </script>
 </body>
 </html>
