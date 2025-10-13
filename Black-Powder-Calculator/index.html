@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#1b1b1b" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icons/icon-192.png" type="image/png" />
   <title>Black Powder Ratio Calculator</title>
   <style>
     * {
@@ -117,16 +114,6 @@
       document.getElementById("psntGrams").textContent = psnt.toFixed(2);
       document.getElementById("ccGrams").textContent = cc.toFixed(2);
       document.getElementById("sGrams").textContent = s.toFixed(2);
-    }
-
-    // ✅ Register the Service Worker for PWA
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("service-worker.js")
-          .then(() => console.log("✅ Service Worker registered"))
-          .catch((err) => console.log("❌ Service Worker failed:", err));
-      });
     }
   </script>
 </body>
