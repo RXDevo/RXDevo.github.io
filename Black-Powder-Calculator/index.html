@@ -1,120 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Black Powder Ratio Calculator</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Material Ratio Calculator</title>
+  <meta name="description" content="Calculate required grams of each material based on ratio percentages." />
+
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: "Poppins", sans-serif;
+    :root {
+      --fg:#0f172a;
+      --muted:#475569;
+      --bg:#f8fafc;
+      --card:#ffffff;
+      --accent:#2563eb;
+      --accent-2:#22c55e;
+      --warn:#ef4444;
     }
 
+    * { box-sizing:border-box }
+
     body {
-      background: linear-gradient(135deg, #1b1b1b, #303030);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Ubuntu, Arial, sans-serif;
+      color: var(--fg);
+      background: linear-gradient(180deg, #f0f7ff, #fff);
+    }
+
+    header { padding:2rem 1rem; text-align:center }
+    h1 { margin:0 0 .25rem; font-size:clamp(1.5rem,2.6vw,2.2rem) }
+    .sub { color:var(--muted) }
+
+    .container { max-width:980px; margin:0 auto; padding:1rem }
+    .grid { display:grid; grid-template-columns:1fr; gap:1rem }
+    @media (min-width: 900px) {
+      .grid { grid-template-columns: 420px 1fr }
     }
 
     .card {
-      background: #222;
-      border-radius: 20px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-      padding: 30px;
-      width: 95%;
-      max-width: 400px;
-      text-align: center;
+      background:var(--card);
+      border-radius:18px;
+      box-shadow:0 10px 30px rgba(2,6,23,.12);
+      padding:1rem;
     }
 
-    h1 {
-      font-size: 1.6rem;
-      margin-bottom: 15px;
-      color: #f5b700;
+    label { font-weight:600; display:block; margin:.5rem 0 .25rem }
+    input[type="number"] {
+      width:100%; padding:.7rem;
+      border:1px solid #e2e8f0; border-radius:12px;
+      font-size:1rem; background:#fff;
+    }
+    input[type="number"]:focus {
+      outline:3px solid rgba(37,99,235,.15); border-color:var(--accent);
     }
 
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: 500;
-      font-size: 1rem;
-      color: #ccc;
+    .row { display:grid; grid-template-columns:1fr; gap:.75rem }
+    .btns { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1rem }
+
+    button {
+      appearance:none;
+      border:0;
+      border-radius:12px;
+      padding:.7rem 1rem;
+      font-weight:700;
+      cursor:pointer;
     }
 
-    input {
-      margin-top: 8px;
-      width: 100%;
-      padding: 10px;
-      border: none;
+    .primary { background:var(--accent); color:#fff }
+    .secondary { background:#e2e8f0 }
+
+    .preview, .result {
+      font-variant-ligatures: none;
+      padding:.75rem 1rem;
+      background:#f8fafc;
+      border:1px dashed #e2e8f0;
+      border-radius:12px;
+      margin-top:.75rem;
+    }
+
+    .result {
+      background:#f0fdf4;
+      border:1px solid rgba(34,197,94,.25);
+    }
+
+    footer { padding:2rem 1rem; text-align:center; color:var(--muted) }
+    .small { font-size:.9rem }
+
+    .back-btn {
+      position: fixed;
+      top: 15px;
+      right: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      text-decoration: none;
+      color: var(--fg);
+      background: var(--card);
+      padding: 6px 14px;
       border-radius: 10px;
-      background: #333;
-      color: white;
-      font-size: 1rem;
-      text-align: center;
-      outline: none;
-      transition: background 0.3s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      transition: background 0.3s ease, transform 0.2s ease;
     }
-
-    input:focus {
-      background: #3a3a3a;
-    }
-
-    .output {
-      margin-top: 25px;
-      text-align: left;
-      background: #2b2b2b;
-      padding: 15px;
-      border-radius: 12px;
-    }
-
-    .output p {
-      margin: 8px 0;
-      font-size: 1rem;
-    }
-
-    .highlight {
-      color: #00d26a;
-      font-weight: 600;
-    }
-
-    footer {
-      margin-top: 20px;
-      font-size: 0.8rem;
-      color: #888;
+    .back-btn:hover {
+      background: #f1f5f9;
+      transform: translateY(-2px);
     }
   </style>
 </head>
+
 <body>
-  <div class="card">
-    <h1>Black Powder Ratio Calculator</h1>
-    <p>Enter the total weight (grams) and see how much of each material you need.</p>
+  <a href="#" class="back-btn">&lt;</a>
 
-    <label for="totalGrams">Total Mix (grams):</label>
-    <input type="number" id="totalGrams" placeholder="e.g. 100" oninput="calculate()" />
+  <header>
+    <h1>Material Ratio Calculator</h1>
+    <div class="sub">Calculate required grams for each component (75% PSNT , 15% CC , 10% S)</div>
+  </header>
 
-    <div class="output">
-      <p><strong>75% PSNT:</strong> <span class="highlight" id="psntGrams">0</span> g</p>
-      <p><strong>15% CC:</strong> <span class="highlight" id="ccGrams">0</span> g</p>
-      <p><strong>10% S:</strong> <span class="highlight" id="sGrams">0</span> g</p>
-    </div>
+  <div class="container grid">
+    <section class="card">
+      <h2 style="margin-top:0">Enter grams for one material</h2>
 
-    <footer>Designed by RX ⚙️</footer>
+      <div class="row">
+        <div>
+          <label for="psnt">75% PSNT (grams)</label>
+          <input id="psnt" type="number" step="any" placeholder="Enter grams for PSNT" />
+        </div>
+        <div>
+          <label for="cc">15% CC (grams)</label>
+          <input id="cc" type="number" step="any" placeholder="Enter grams for CC" />
+        </div>
+        <div>
+          <label for="s">10% S (grams)</label>
+          <input id="s" type="number" step="any" placeholder="Enter grams for S" />
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="calcBtn">Calculate</button>
+        <button class="secondary" id="clearBtn">Clear</button>
+      </div>
+
+      <p class="muted small">
+        Tip: Enter any one material's grams. The others will be calculated based on 75:15:10 ratio.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0">Results</h2>
+      <div id="output" class="muted">Enter a value and click <em>Calculate</em>.</div>
+    </section>
   </div>
 
-  <script>
-    function calculate() {
-      const total = parseFloat(document.getElementById("totalGrams").value) || 0;
-      const psnt = total * 0.75;
-      const cc = total * 0.15;
-      const s = total * 0.10;
+  <footer>
+    <div class="small">Made with vanilla HTML, CSS, and JavaScript. <strong>Created by RX</strong>.</div>
+  </footer>
 
-      document.getElementById("psntGrams").textContent = psnt.toFixed(2);
-      document.getElementById("ccGrams").textContent = cc.toFixed(2);
-      document.getElementById("sGrams").textContent = s.toFixed(2);
-    }
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const ratio = { psnt: 75, cc: 15, s: 10 };
+
+    const calc = () => {
+      const psnt = parseFloat($('#psnt').value);
+      const cc = parseFloat($('#cc').value);
+      const s = parseFloat($('#s').value);
+      const out = $('#output');
+      const totalRatio = ratio.psnt + ratio.cc + ratio.s;
+
+      if (![psnt, cc, s].some(v => !isNaN(v))) {
+        out.innerHTML = '<div class="warn">Please enter at least one material amount.</div>';
+        return;
+      }
+
+      let baseValue, basePercent;
+
+      if (!isNaN(psnt)) { baseValue = psnt; basePercent = ratio.psnt; }
+      else if (!isNaN(cc)) { baseValue = cc; basePercent = ratio.cc; }
+      else if (!isNaN(s)) { baseValue = s; basePercent = ratio.s; }
+
+      const totalMass = baseValue / (basePercent / totalRatio);
+      const psntMass = (ratio.psnt / totalRatio) * totalMass;
+      const ccMass = (ratio.cc / totalRatio) * totalMass;
+      const sMass = (ratio.s / totalRatio) * totalMass;
+
+      out.innerHTML = `
+        <div class="result">
+          <strong>Total Mixture:</strong> ${totalMass.toFixed(3)} g<br><br>
+          <strong>75% PSNT:</strong> ${psntMass.toFixed(3)} g<br>
+          <strong>15% CC:</strong> ${ccMass.toFixed(3)} g<br>
+          <strong>10% S:</strong> ${sMass.toFixed(3)} g
+        </div>
+      `;
+    };
+
+    const clearAll = () => {
+      ['#psnt','#cc','#s'].forEach(id => $(id).value = '');
+      $('#output').innerHTML = 'Enter a value and click <em>Calculate</em>.';
+    };
+
+    $('#calcBtn').addEventListener('click', calc);
+    $('#clearBtn').addEventListener('click', clearAll);
   </script>
 </body>
 </html>
