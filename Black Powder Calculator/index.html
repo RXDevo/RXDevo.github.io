@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1b1b1b" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <title>Black Powder Ratio Calculator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1b1b1b, #303030);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      background: #222;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      padding: 30px;
+      width: 95%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 15px;
+      color: #f5b700;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 500;
+      font-size: 1rem;
+      color: #ccc;
+    }
+
+    input {
+      margin-top: 8px;
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      background: #333;
+      color: white;
+      font-size: 1rem;
+      text-align: center;
+      outline: none;
+      transition: background 0.3s;
+    }
+
+    input:focus {
+      background: #3a3a3a;
+    }
+
+    .output {
+      margin-top: 25px;
+      text-align: left;
+      background: #2b2b2b;
+      padding: 15px;
+      border-radius: 12px;
+    }
+
+    .output p {
+      margin: 8px 0;
+      font-size: 1rem;
+    }
+
+    .highlight {
+      color: #00d26a;
+      font-weight: 600;
+    }
+
+    footer {
+      margin-top: 20px;
+      font-size: 0.8rem;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Black Powder Ratio Calculator</h1>
+    <p>Enter the total weight (grams) and see how much of each material you need.</p>
+
+    <label for="totalGrams">Total Mix (grams):</label>
+    <input type="number" id="totalGrams" placeholder="e.g. 100" oninput="calculate()" />
+
+    <div class="output">
+      <p><strong>75% PSNT:</strong> <span class="highlight" id="psntGrams">0</span> g</p>
+      <p><strong>15% CC:</strong> <span class="highlight" id="ccGrams">0</span> g</p>
+      <p><strong>10% S:</strong> <span class="highlight" id="sGrams">0</span> g</p>
+    </div>
+
+    <footer>Designed by RX ⚙️</footer>
+  </div>
+
+  <script>
+    function calculate() {
+      const total = parseFloat(document.getElementById("totalGrams").value) || 0;
+      const psnt = total * 0.75;
+      const cc = total * 0.15;
+      const s = total * 0.10;
+
+      document.getElementById("psntGrams").textContent = psnt.toFixed(2);
+      document.getElementById("ccGrams").textContent = cc.toFixed(2);
+      document.getElementById("sGrams").textContent = s.toFixed(2);
+    }
+
+    // ✅ Register the Service Worker for PWA
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("service-worker.js")
+          .then(() => console.log("✅ Service Worker registered"))
+          .catch((err) => console.log("❌ Service Worker failed:", err));
+      });
+    }
+  </script>
+</body>
+</html>
