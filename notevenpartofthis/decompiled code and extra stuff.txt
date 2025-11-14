@@ -1,0 +1,810 @@
+CustomMusicPlusClient.class
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.hindustani_gamer_fardin.custommusicplus.audio.AudioPlayer
+ *  com.hindustani_gamer_fardin.custommusicplus.playlist.PlaylistManager
+ *  com.mojang.brigadier.arguments.ArgumentType
+ *  com.mojang.brigadier.arguments.StringArgumentType
+ *  com.mojang.brigadier.builder.LiteralArgumentBuilder
+ *  com.mojang.brigadier.context.CommandContext
+ *  net.fabricmc.api.ClientModInitializer
+ *  net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
+ *  net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
+ *  net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
+ *  net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+ *  net.minecraft.class_2561
+ *  net.minecraft.class_310
+ *  org.slf4j.Logger
+ *  org.slf4j.LoggerFactory
+ */
+package com.hindustani_gamer_fardin.custommusicplus;
+
+import com.hindustani_gamer_fardin.custommusicplus.audio.AudioPlayer;
+import com.hindustani_gamer_fardin.custommusicplus.playlist.PlaylistManager;
+import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.class_2561;
+import net.minecraft.class_310;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class CustomMusicPlusClient
+implements ClientModInitializer {
+    public static final String MOD_ID = "custommusicplus";
+    public static final String MOD_NAME = "CustomMusic+";
+    private static final Logger LOGGER = LoggerFactory.getLogger((String)"CustomMusic+");
+    private PlaylistManager playlistManager;
+    private AudioPlayer audioPlayer;
+    private final Deque<String> playbackQueue = new ArrayDeque<String>();
+    private boolean initialized = false;
+
+    public void onInitializeClient() {
+        LOGGER.info("{} initializing (client)", (Object)MOD_NAME);
+        class_310 client = class_310.method_1551();
+        Path runDir = client.field_1697.toPath();
+        this.playlistManager = new PlaylistManager(runDir.resolve("config").resolve("custommusic"));
+        this.playlistManager.ensureDirectories();
+        this.playlistManager.scan();
+        this.audioPlayer = new AudioPlayer();
+        this.registerClientCommands();
+        this.registerTickers();
+        this.registerShutdownCleanup();
+        this.initialized = true;
+        LOGGER.info("{} initialized successfully.", (Object)MOD_NAME);
+    }
+
+    private void registerClientCommands() {
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            dispatcher.register((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)ClientCommandManager.literal((String)"CustomMusic").then(ClientCommandManager.literal((String)"play").then(ClientCommandManager.argument((String)"name", (ArgumentType)StringArgumentType.string()).executes(ctx -> {
+                String name = StringArgumentType.getString((CommandContext)ctx, (String)"name").trim();
+                this.doPlay(name);
+                return 1;
+            })))).then(ClientCommandManager.literal((String)"list").executes(ctx -> {
+                this.doList();
+                return 1;
+            }))).then(ClientCommandManager.literal((String)"help").executes(ctx -> {
+                this.doHelp();
+                return 1;
+            }))).then(ClientCommandManager.literal((String)"stop").executes(ctx -> {
+                this.doStop();
+                return 1;
+            }))).then(ClientCommandManager.literal((String)"reload").executes(ctx -> {
+                this.doReload();
+                return 1;
+            }))).then(ClientCommandManager.literal((String)"pause").executes(ctx -> {
+                this.doPause();
+                return 1;
+            }))).then(ClientCommandManager.literal((String)"resume").executes(ctx -> {
+                this.doResume();
+                return 1;
+            }))).then(ClientCommandManager.literal((String)"search").then(ClientCommandManager.argument((String)"keyword", (ArgumentType)StringArgumentType.string()).executes(ctx -> {
+                String keyword = StringArgumentType.getString((CommandContext)ctx, (String)"keyword").trim();
+                this.doSearch(keyword);
+                return 1;
+            }))));
+            dispatcher.register((LiteralArgumentBuilder)ClientCommandManager.literal((String)"custommusic").redirect(dispatcher.getRoot().getChild("CustomMusic")));
+        });
+    }
+
+    private void registerTickers() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (!this.initialized || this.audioPlayer == null) {
+                return;
+            }
+            this.audioPlayer.update();
+            if (this.audioPlayer.isStopped() && !this.playbackQueue.isEmpty()) {
+                String nextTrack = this.playbackQueue.pollFirst();
+                Path path = this.playlistManager.getPlayableTrackPath(nextTrack);
+                if (path != null) {
+                    boolean ok = this.audioPlayer.play(path);
+                    if (ok) {
+                        this.sendChat("\u25b6 Playing: " + nextTrack);
+                    } else {
+                        this.sendChat("\u2716 Failed to play: " + nextTrack);
+                    }
+                } else {
+                    this.sendChat("\u26a0 Track not found or unsupported: " + nextTrack);
+                }
+            }
+        });
+    }
+
+    private void registerShutdownCleanup() {
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            try {
+                if (this.audioPlayer != null) {
+                    this.audioPlayer.cleanup();
+                }
+            }
+            catch (Exception e) {
+                LOGGER.warn("Error during audio cleanup: {}", (Object)e.getMessage());
+            }
+        });
+    }
+
+    private void doPlay(String nameRaw) {
+        String name = PlaylistManager.normalizeName((String)nameRaw);
+        if (this.playlistManager.getPlaylists().containsKey(name)) {
+            List items = (List)this.playlistManager.getPlaylists().get(name);
+            if (items.isEmpty()) {
+                this.sendChat("\u26a0 Playlist is empty: " + nameRaw);
+                return;
+            }
+            this.playbackQueue.clear();
+            ArrayList<String> queueItems = new ArrayList<String>();
+            for (String trackName : items) {
+                queueItems.add(trackName);
+            }
+            this.playbackQueue.addAll(queueItems);
+            this.sendChat("\ud83d\udcc2 Playlist queued: " + nameRaw + " (" + queueItems.size() + " tracks)");
+            if (!this.playbackQueue.isEmpty()) {
+                String first = this.playbackQueue.pollFirst();
+                Path path = this.playlistManager.getPlayableTrackPath(first);
+                if (path != null) {
+                    boolean ok = this.audioPlayer.play(path);
+                    if (ok) {
+                        this.sendChat("\u25b6 Playing: " + first);
+                    } else {
+                        this.sendChat("\u2716 Failed to play: " + first);
+                    }
+                } else {
+                    this.sendChat("\u26a0 Track not found or unsupported: " + first);
+                }
+            }
+            return;
+        }
+        Path path = this.playlistManager.getPlayableTrackPath(name);
+        if (path != null) {
+            this.playbackQueue.clear();
+            boolean ok = this.audioPlayer.play(path);
+            if (ok) {
+                this.sendChat("\u25b6 Playing: " + nameRaw);
+            } else {
+                this.sendChat("\u2716 Failed to play: " + nameRaw);
+            }
+            return;
+        }
+        if (this.playlistManager.isRecognizedButUnsupported(name)) {
+            this.sendChat("\u26a0 Recognized but unsupported format (mp3 currently not playable): " + nameRaw);
+            return;
+        }
+        this.sendChat("\u274c Not found: " + nameRaw + " (no matching track or playlist)");
+    }
+
+    private void doList() {
+        Map tracks = this.playlistManager.getTracks();
+        Map playlists = this.playlistManager.getPlaylists();
+        StringBuilder sb = new StringBuilder();
+        sb.append("\ud83c\udfb5 Available Tracks:\n");
+        if (tracks.isEmpty()) {
+            sb.append(" - (none)\n");
+        } else {
+            tracks.values().stream().filter(t -> t.playable).map(t -> " - " + t.displayName).sorted().forEach(line -> sb.append((String)line).append("\n"));
+        }
+        sb.append("\n\u26a0 Recognized (not playable yet):\n");
+        tracks.values().stream().filter(t -> !t.playable).map(t -> " - " + t.displayName + " [" + t.extension + "]").sorted().forEach(line -> sb.append((String)line).append("\n"));
+        sb.append("\n\ud83d\udcc2 Available Playlists:\n");
+        if (playlists.isEmpty()) {
+            sb.append(" - (none)\n");
+        } else {
+            playlists.keySet().stream().sorted().map(p -> " - " + p).forEach(line -> sb.append((String)line).append("\n"));
+        }
+        this.sendChat(sb.toString().trim());
+    }
+
+    private void doHelp() {
+        String help = "\ud83c\udfb6 CustomMusic+ Commands:\n /CustomMusic play <track|playlist>  \u2192 Play a track or playlist\n /CustomMusic pause                  \u2192 Pause current music\n /CustomMusic resume                 \u2192 Resume paused music\n /CustomMusic stop                   \u2192 Stop current music and clear queue\n /CustomMusic list                   \u2192 List all available tracks/playlists\n /CustomMusic search <keyword>       \u2192 Search for tracks containing keyword\n /CustomMusic reload                 \u2192 Reload all tracks and playlists\n /CustomMusic help                   \u2192 Show this help menu\n\nFolder: config/custommusic/\n- .ogg files play natively\n- .mp3 files play natively\n- playlists/*.txt contain track names (one per line)\n";
+        this.sendChat(help.trim());
+    }
+
+    private void doStop() {
+        if (this.audioPlayer != null) {
+            this.audioPlayer.stop();
+        }
+        this.playbackQueue.clear();
+        this.sendChat("\u23f9 Stopped and cleared queue.");
+    }
+
+    private void doReload() {
+        this.playlistManager.scan();
+        this.sendChat("\ud83d\udd01 Reloaded tracks and playlists.");
+    }
+
+    private void doPause() {
+        if (this.audioPlayer != null) {
+            this.audioPlayer.pause();
+            this.sendChat("\u23f8 Music paused.");
+        } else {
+            this.sendChat("\u274c No music is currently playing.");
+        }
+    }
+
+    private void doResume() {
+        if (this.audioPlayer != null) {
+            this.audioPlayer.resume();
+            this.sendChat("\u25b6 Music resumed.");
+        } else {
+            this.sendChat("\u274c No music to resume.");
+        }
+    }
+
+    private void doSearch(String keyword) {
+        if (this.playlistManager == null) {
+            this.sendChat("\u274c Playlist manager not initialized.");
+            return;
+        }
+        Map tracks = this.playlistManager.getTracks();
+        Map playlists = this.playlistManager.getPlaylists();
+        ArrayList<String> matchingTracks = new ArrayList<String>();
+        ArrayList<String> matchingPlaylists = new ArrayList<String>();
+        String lowerKeyword = keyword.toLowerCase();
+        for (String trackName : tracks.keySet()) {
+            if (!trackName.toLowerCase().contains(lowerKeyword)) continue;
+            matchingTracks.add(trackName);
+        }
+        for (String playlistName : playlists.keySet()) {
+            if (!playlistName.toLowerCase().contains(lowerKeyword)) continue;
+            matchingPlaylists.add(playlistName);
+        }
+        if (matchingTracks.isEmpty() && matchingPlaylists.isEmpty()) {
+            this.sendChat("\ud83d\udd0d No tracks or playlists found containing '" + keyword + "'");
+            return;
+        }
+        StringBuilder result = new StringBuilder("\ud83d\udd0d Search results for '" + keyword + "':\n");
+        if (!matchingTracks.isEmpty()) {
+            result.append("\ud83d\udcc0 Tracks:\n");
+            for (String track : matchingTracks) {
+                result.append("  \u2022 ").append(track).append("\n");
+            }
+        }
+        if (!matchingPlaylists.isEmpty()) {
+            result.append("\ud83d\udccb Playlists:\n");
+            for (String playlist : matchingPlaylists) {
+                result.append("  \u2022 ").append(playlist).append("\n");
+            }
+        }
+        this.sendChat(result.toString().trim());
+    }
+
+    private void sendChat(String message) {
+        class_310 client = class_310.method_1551();
+        if (client.field_1724 != null) {
+            client.field_1724.method_7353(class_2561.method_30163((String)message), false);
+        } else {
+            LOGGER.info(message);
+        }
+    }
+}
+
+CustomMusic.class
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.fabricmc.api.ModInitializer
+ *  org.slf4j.Logger
+ *  org.slf4j.LoggerFactory
+ */
+package com.hindustani_gamer_fardin.custommusicplus;
+
+import net.fabricmc.api.ModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class CustomMusic
+implements ModInitializer {
+    public static final String MOD_ID = "custommusicplus";
+    public static final Logger LOGGER = LoggerFactory.getLogger((String)"custommusicplus");
+
+    public void onInitialize() {
+        LOGGER.info("Hello Fabric world!");
+    }
+}
+
+
+
+AudioPlayer.class
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.hindustani_gamer_fardin.custommusicplus.audio.OggDecoder
+ *  com.hindustani_gamer_fardin.custommusicplus.audio.OggDecoder$OggData
+ *  org.lwjgl.openal.AL
+ *  org.lwjgl.openal.AL10
+ *  org.lwjgl.openal.ALC
+ *  org.lwjgl.openal.ALC10
+ *  org.lwjgl.openal.ALCCapabilities
+ *  org.slf4j.Logger
+ *  org.slf4j.LoggerFactory
+ */
+package com.hindustani_gamer_fardin.custommusicplus.audio;
+
+import com.hindustani_gamer_fardin.custommusicplus.audio.OggDecoder;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
+import java.nio.file.Path;
+import java.util.Locale;
+import org.lwjgl.openal.AL;
+import org.lwjgl.openal.AL10;
+import org.lwjgl.openal.ALC;
+import org.lwjgl.openal.ALC10;
+import org.lwjgl.openal.ALCCapabilities;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class AudioPlayer {
+    private static final Logger LOGGER = LoggerFactory.getLogger((String)"CustomMusic+ AudioPlayer");
+    private long device = 0L;
+    private long context = 0L;
+    private int sourceId = 0;
+    private int bufferId = 0;
+    private boolean initialized = false;
+
+    public boolean play(Path audioPath) {
+        try {
+            String ext;
+            LOGGER.info("Attempting to play: {}", (Object)audioPath);
+            this.ensureInit();
+            this.stop();
+            this.clearBuffer();
+            String fileName = audioPath.getFileName().toString().toLowerCase(Locale.ROOT);
+            int dot = fileName.lastIndexOf(46);
+            String string = ext = dot >= 0 ? fileName.substring(dot + 1) : "";
+            if (!"ogg".equals(ext)) {
+                LOGGER.warn("Unsupported audio format: {}", (Object)ext);
+                return false;
+            }
+            OggDecoder.OggData data = OggDecoder.decode((Path)audioPath);
+            LOGGER.info("Decoded OGG: {} channels, {} Hz, {} samples", new Object[]{data.alFormat == 4353 ? 1 : 2, data.sampleRate, data.pcm.remaining()});
+            ShortBuffer pcm = data.pcm;
+            int alFormat = data.alFormat;
+            int sampleRate = data.sampleRate;
+            this.bufferId = AL10.alGenBuffers();
+            this.checkALError("alGenBuffers");
+            AL10.alBufferData((int)this.bufferId, (int)alFormat, (ShortBuffer)pcm, (int)sampleRate);
+            this.checkALError("alBufferData");
+            this.sourceId = AL10.alGenSources();
+            this.checkALError("alGenSources");
+            AL10.alSourcei((int)this.sourceId, (int)514, (int)1);
+            AL10.alSource3f((int)this.sourceId, (int)4100, (float)0.0f, (float)0.0f, (float)0.0f);
+            AL10.alSource3f((int)this.sourceId, (int)4102, (float)0.0f, (float)0.0f, (float)0.0f);
+            AL10.alSourcei((int)this.sourceId, (int)4105, (int)this.bufferId);
+            AL10.alSourcef((int)this.sourceId, (int)4106, (float)1.0f);
+            AL10.alSourcef((int)this.sourceId, (int)4099, (float)1.0f);
+            this.checkALError("alSource setup");
+            AL10.alSourcePlay((int)this.sourceId);
+            this.checkALError("alSourcePlay");
+            LOGGER.info("Successfully started playback for: {}", (Object)audioPath);
+            return true;
+        }
+        catch (Exception e) {
+            LOGGER.warn("Failed to play '{}': {}", (Object)audioPath, (Object)e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public void pause() {
+        if (!this.initialized || this.sourceId == 0) {
+            return;
+        }
+        AL10.alSourcePause((int)this.sourceId);
+    }
+
+    public void resume() {
+        if (!this.initialized || this.sourceId == 0) {
+            return;
+        }
+        int state = AL10.alGetSourcei((int)this.sourceId, (int)4112);
+        if (state == 4115) {
+            AL10.alSourcePlay((int)this.sourceId);
+        }
+    }
+
+    public void stop() {
+        if (!this.initialized || this.sourceId == 0) {
+            return;
+        }
+        AL10.alSourceStop((int)this.sourceId);
+        AL10.alDeleteSources((int)this.sourceId);
+        this.sourceId = 0;
+    }
+
+    public boolean isStopped() {
+        if (!this.initialized || this.sourceId == 0) {
+            return true;
+        }
+        int state = AL10.alGetSourcei((int)this.sourceId, (int)4112);
+        return state == 4116;
+    }
+
+    public void update() {
+    }
+
+    public void cleanup() {
+        this.stop();
+        this.clearBuffer();
+        if (this.context != 0L) {
+            ALC10.alcMakeContextCurrent((long)0L);
+            ALC10.alcDestroyContext((long)this.context);
+            this.context = 0L;
+        }
+        if (this.device != 0L) {
+            ALC10.alcCloseDevice((long)this.device);
+            this.device = 0L;
+        }
+        this.initialized = false;
+    }
+
+    private void ensureInit() {
+        if (this.initialized) {
+            return;
+        }
+        LOGGER.info("Initializing OpenAL...");
+        this.device = ALC10.alcOpenDevice((ByteBuffer)null);
+        if (this.device == 0L) {
+            throw new IllegalStateException("Failed to open default OpenAL device");
+        }
+        LOGGER.info("OpenAL device opened: {}", (Object)this.device);
+        this.context = ALC10.alcCreateContext((long)this.device, (IntBuffer)null);
+        if (this.context == 0L) {
+            throw new IllegalStateException("Failed to create OpenAL context");
+        }
+        LOGGER.info("OpenAL context created: {}", (Object)this.context);
+        ALC10.alcMakeContextCurrent((long)this.context);
+        ALCCapabilities alcCaps = ALC.createCapabilities((long)this.device);
+        AL.createCapabilities((ALCCapabilities)alcCaps);
+        AL10.alListener3f((int)4100, (float)0.0f, (float)0.0f, (float)0.0f);
+        AL10.alListener3f((int)4102, (float)0.0f, (float)0.0f, (float)0.0f);
+        AL10.alListenerf((int)4106, (float)1.0f);
+        this.initialized = true;
+        LOGGER.info("OpenAL initialization complete");
+    }
+
+    private void checkALError(String operation) {
+        int error = AL10.alGetError();
+        if (error != 0) {
+            Object errorMsg = switch (error) {
+                case 40961 -> "AL_INVALID_NAME";
+                case 40962 -> "AL_INVALID_ENUM";
+                case 40963 -> "AL_INVALID_VALUE";
+                case 40964 -> "AL_INVALID_OPERATION";
+                case 40965 -> "AL_OUT_OF_MEMORY";
+                default -> "Unknown error: " + error;
+            };
+            LOGGER.error("OpenAL error during {}: {}", (Object)operation, errorMsg);
+        }
+    }
+
+    private void clearBuffer() {
+        if (this.bufferId != 0) {
+            AL10.alDeleteBuffers((int)this.bufferId);
+            this.bufferId = 0;
+        }
+    }
+}
+
+
+
+OggDecoder.class
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.hindustani_gamer_fardin.custommusicplus.audio.OggDecoder$OggData
+ *  org.lwjgl.BufferUtils
+ *  org.lwjgl.stb.STBVorbis
+ */
+package com.hindustani_gamer_fardin.custommusicplus.audio;
+
+import com.hindustani_gamer_fardin.custommusicplus.audio.OggDecoder;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.stb.STBVorbis;
+
+public class OggDecoder {
+    public static OggData decode(Path oggPath) throws IOException {
+        byte[] bytes = Files.readAllBytes(oggPath);
+        ByteBuffer dataBuffer = BufferUtils.createByteBuffer((int)bytes.length);
+        dataBuffer.put(bytes);
+        dataBuffer.flip();
+        IntBuffer channelsBuf = BufferUtils.createIntBuffer((int)1);
+        IntBuffer sampleRateBuf = BufferUtils.createIntBuffer((int)1);
+        ShortBuffer pcm = STBVorbis.stb_vorbis_decode_memory((ByteBuffer)dataBuffer, (IntBuffer)channelsBuf, (IntBuffer)sampleRateBuf);
+        if (pcm == null) {
+            throw new IOException("stb_vorbis_decode_memory failed for: " + String.valueOf(oggPath));
+        }
+        int channels = channelsBuf.get(0);
+        int sampleRate = sampleRateBuf.get(0);
+        int format = channels == 1 ? 4353 : 4355;
+        return new OggData(pcm, format, sampleRate);
+    }
+}
+
+
+
+
+OggDecoder$OggData.class
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hindustani_gamer_fardin.custommusicplus.audio;
+
+import java.nio.ShortBuffer;
+
+public static class OggDecoder.OggData {
+    public final ShortBuffer pcm;
+    public final int alFormat;
+    public final int sampleRate;
+
+    public OggDecoder.OggData(ShortBuffer pcm, int alFormat, int sampleRate) {
+        this.pcm = pcm;
+        this.alFormat = alFormat;
+        this.sampleRate = sampleRate;
+    }
+}
+
+
+
+
+PlaylistManager.class
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.hindustani_gamer_fardin.custommusicplus.playlist.PlaylistManager$TrackInfo
+ *  org.slf4j.Logger
+ *  org.slf4j.LoggerFactory
+ */
+package com.hindustani_gamer_fardin.custommusicplus.playlist;
+
+import com.hindustani_gamer_fardin.custommusicplus.playlist.PlaylistManager;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class PlaylistManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger((String)"CustomMusic+ PlaylistManager");
+    private final Path baseDir;
+    private final Path playlistsDir;
+    private final Map<String, TrackInfo> tracks = new HashMap<String, TrackInfo>();
+    private final Map<String, List<String>> playlists = new HashMap<String, List<String>>();
+
+    public PlaylistManager(Path baseDir) {
+        this.baseDir = baseDir;
+        this.playlistsDir = baseDir.resolve("playlists");
+    }
+
+    public void ensureDirectories() {
+        try {
+            Files.createDirectories(this.baseDir, new FileAttribute[0]);
+            Files.createDirectories(this.playlistsDir, new FileAttribute[0]);
+        }
+        catch (IOException e) {
+            LOGGER.error("Failed to create config directories: {}", (Object)e.getMessage());
+        }
+    }
+
+    public void scan() {
+        block19: {
+            String fileName;
+            DirectoryStream<Path> stream;
+            block18: {
+                this.tracks.clear();
+                this.playlists.clear();
+                try {
+                    if (!Files.exists(this.baseDir, new LinkOption[0]) || !Files.isDirectory(this.baseDir, new LinkOption[0])) break block18;
+                    stream = Files.newDirectoryStream(this.baseDir);
+                    try {
+                        for (Path p : stream) {
+                            String ext;
+                            if (Files.isDirectory(p, new LinkOption[0]) || !(ext = PlaylistManager.getExtension(fileName = p.getFileName().toString()).orElse("").toLowerCase(Locale.ROOT)).equals("ogg")) continue;
+                            String nameNoExt = fileName.substring(0, fileName.length() - ext.length() - 1);
+                            boolean playable = ext.equals("ogg");
+                            String key = PlaylistManager.normalizeName(nameNoExt);
+                            this.tracks.put(key, new TrackInfo(nameNoExt, p, playable, ext));
+                        }
+                    }
+                    finally {
+                        if (stream != null) {
+                            stream.close();
+                        }
+                    }
+                }
+                catch (IOException e) {
+                    LOGGER.warn("Error scanning tracks: {}", (Object)e.getMessage());
+                }
+            }
+            try {
+                if (!Files.exists(this.playlistsDir, new LinkOption[0]) || !Files.isDirectory(this.playlistsDir, new LinkOption[0])) break block19;
+                stream = Files.newDirectoryStream(this.playlistsDir, "*.txt");
+                try {
+                    for (Path p : stream) {
+                        fileName = p.getFileName().toString();
+                        String nameNoExt = fileName.substring(0, fileName.length() - 4);
+                        String key = PlaylistManager.normalizeName(nameNoExt);
+                        List<String> items = this.readPlaylistFile(p);
+                        this.playlists.put(key, items);
+                    }
+                }
+                finally {
+                    if (stream != null) {
+                        stream.close();
+                    }
+                }
+            }
+            catch (IOException e) {
+                LOGGER.warn("Error scanning playlists: {}", (Object)e.getMessage());
+            }
+        }
+        LOGGER.info("Scan complete: {} tracks ({} playable), {} playlists", new Object[]{this.tracks.size(), this.tracks.values().stream().filter(t -> t.playable).count(), this.playlists.size()});
+    }
+
+    public Map<String, TrackInfo> getTracks() {
+        return Collections.unmodifiableMap(this.tracks);
+    }
+
+    public Map<String, List<String>> getPlaylists() {
+        return Collections.unmodifiableMap(this.playlists);
+    }
+
+    public Path getPlayableTrackPath(String nameRaw) {
+        String key = PlaylistManager.normalizeName(nameRaw);
+        TrackInfo info = this.tracks.get(key);
+        if (info != null && info.playable) {
+            return info.path;
+        }
+        return null;
+    }
+
+    public boolean isRecognizedButUnsupported(String nameRaw) {
+        String key = PlaylistManager.normalizeName(nameRaw);
+        TrackInfo info = this.tracks.get(key);
+        return info != null && !info.playable;
+    }
+
+    private List<String> readPlaylistFile(Path file) {
+        try {
+            List<String> lines = Files.readAllLines(file);
+            return lines.stream().map(String::trim).filter(s -> !s.isEmpty() && !s.startsWith("#")).map(PlaylistManager::normalizeName).collect(Collectors.toList());
+        }
+        catch (IOException e) {
+            LOGGER.warn("Failed reading playlist {}: {}", (Object)file.getFileName(), (Object)e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    public static String normalizeName(String s) {
+        return s.toLowerCase(Locale.ROOT).trim();
+    }
+
+    private static Optional<String> getExtension(String fileName) {
+        int idx = fileName.lastIndexOf(46);
+        if (idx >= 0 && idx < fileName.length() - 1) {
+            return Optional.of(fileName.substring(idx + 1));
+        }
+        return Optional.empty();
+    }
+}
+
+
+
+PlaylistManager$TrackInfo.class
+/*
+ * Decompiled with CFR 0.152.
+ */
+package com.hindustani_gamer_fardin.custommusicplus.playlist;
+
+import java.nio.file.Path;
+
+public static class PlaylistManager.TrackInfo {
+    public final String displayName;
+    public final Path path;
+    public final boolean playable;
+    public final String extension;
+
+    public PlaylistManager.TrackInfo(String displayName, Path path, boolean playable, String extension) {
+        this.displayName = displayName;
+        this.path = path;
+        this.playable = playable;
+        this.extension = extension;
+    }
+}
+
+
+
+
+
+custommusicplus.mixins.json
+{
+	"required": true,
+	"package": "com.hindustani_gamer_fardin.custommusicplus.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"ExampleMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
+
+custommusicplus-refmap.json
+{
+  "mappings": {
+    "com/hindustani_gamer_fardin/custommusicplus/mixin/ExampleMixin": {
+      "loadWorld": "Lnet/minecraft/server/MinecraftServer;method_3735()V"
+    }
+  },
+  "data": {
+    "named:intermediary": {
+      "com/hindustani_gamer_fardin/custommusicplus/mixin/ExampleMixin": {
+        "loadWorld": "Lnet/minecraft/server/MinecraftServer;method_3735()V"
+      }
+    }
+  }
+}
+
+fabric.mod.json
+{
+	"schemaVersion": 1,
+	"id": "custommusicplus",
+	"version": "1.0.0",
+	"name": "CustomMusic+",
+	"description": "Personal Minecraft music player — organized, simple, and made for custom experiences. Play .ogg files and playlists directly from config/custommusic/.",
+	"authors": [
+		"hindustani_gamer_fardin"
+	],
+	"contact": {
+		"homepage": "https://example.com/",
+		"sources": "https://example.com/"
+	},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.hindustani_gamer_fardin.custommusicplus.CustomMusicPlusClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.17.2",
+		"fabric-api": ">=0.136.0+1.21.10",
+		"minecraft": "1.21.10"
+	}
+}
