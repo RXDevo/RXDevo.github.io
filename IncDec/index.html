@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Website Hub</title>
+
+<style>
+    :root {
+        --bg: #f2f2f2;
+        --card-bg: white;
+        --text: #000;
+        --subtext: rgba(0,0,0,0.75);
+    }
+
+    body.dark {
+        --bg: #1a1a1a;
+        --card-bg: #242424;
+        --text: #fff;
+        --subtext: rgba(255,255,255,0.7);
+    }
+
+    body {
+        background: var(--bg);
+        margin: 0;
+        font-family: Arial, sans-serif;
+        transition: background 0.3s ease;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: auto;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        font-size: 40px;
+        margin-bottom: 10px;
+        color: var(--text);
+    }
+
+    /* Fade animation */
+    .fade {
+        animation: fadeIn 0.5s ease forwards;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .desc-box {
+        background: var(--card-bg);
+        color: var(--text);
+        padding: 18px;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        margin-bottom: 20px;
+        line-height: 1.5;
+        transition: 0.3s;
+    }
+
+    /* SEARCH BAR */
+    .search-box {
+        background: var(--card-bg);
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 12px 15px;
+        border-radius: 8px;
+        border: 1px solid #cfcfcf;
+        font-size: 16px;
+        outline: none;
+        background: var(--bg);
+        color: var(--text);
+        box-sizing: border-box;
+    }
+
+    .links-section {
+        background: var(--card-bg);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+
+    .link-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        background: var(--bg);
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        text-decoration: none;
+        border: 1px solid #dcdcdc;
+        color: var(--text);
+        cursor: pointer;
+        opacity: 0;
+        animation: fadeIn 0.4s ease forwards;
+        transition: 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    .link-item:hover {
+        transform: scale(0.985);
+        box-shadow: 0 0 12px rgba(0,0,0,0.22);
+    }
+
+    body.dark .link-item { border: 1px solid #333; }
+    body.dark .link-item:hover { box-shadow: 0 0 12px rgba(255,255,255,0.15); }
+
+    .icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        object-fit: cover;
+        background: #eee;
+    }
+
+    .text-group { display: flex; flex-direction: column; }
+
+    .item-title { font-size: 20px; margin: 0; font-weight: bold; color: var(--text); }
+    .item-desc  { font-size: 15px; margin: 0; color: var(--subtext); }
+
+    /* Floating button panel */
+    .floating-panel {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 999;
+    }
+
+    .float-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: var(--card-bg);
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 22px;
+        cursor: pointer;
+        border: 1px solid #ccc;
+        transition: 0.2s;
+    }
+
+    .float-btn:hover { transform: scale(0.9); background: #ccc; }
+    body.dark .float-btn { border: 1px solid #444; }
+    body.dark .float-btn:hover { background: #555; }
+</style>
+</head>
+<body>
+
+<!-- Floating Buttons -->
+<div class="floating-panel">
+    <div class="float-btn" onclick="window.location.href = BACK_LINK">&lt;</div>
+    <div class="float-btn" onclick="toggleTheme()">☀️</div>
+</div>
+
+<script>
+    const BACK_LINK = "https://example.com";
+    function toggleTheme() { document.body.classList.toggle("dark"); }
+
+    /* Auto favicon helper */
+    function autoFavicon(url) {
+        try {
+            const u = new URL(url);
+            return u.origin + "/favicon.ico";
+        } catch { return ""; }
+    }
+</script>
+
+<div class="container fade">
+
+    <h1>My Website Hub</h1>
+
+    <div class="desc-box fade">
+        A clean hub for all my websites.<br>
+        Add more cards easily by copy & pasting one below.
+    </div>
+
+    <!-- SEARCH BAR -->
+    <div class="search-box fade">
+        <input type="text" id="searchInput" placeholder="Search websites...">
+    </div>
+
+    <div class="links-section fade" id="links">
+
+        <!-- CARD TEMPLATE TO COPY -->
+        <!--
+            ICON OPTIONS:
+
+            data-icon-type="auto"
+            data-icon-value="" (optional)
+
+            data-icon-type="url"
+            data-icon-value="https://example.com/icon.png"
+
+            data-icon-type="path"
+            data-icon-value="icons/myicon.png"
+        -->
+
+        <a class="link-item"
+           data-title="GitHub"
+           data-desc="Open-source projects, code hosting, and tools."
+           data-url="https://github.com"
+           data-icon-type="auto"
+           data-icon-value=""
+           target="_blank">
+            <img class="icon">
+            <div class="text-group">
+                <p class="item-title">GitHub</p>
+                <p class="item-desc">Open-source projects, code hosting, and tools.</p>
+            </div>
+        </a>
+
+        <a class="link-item"
+           data-title="YouTube"
+           data-desc="Videos, tutorials, entertainment."
+           data-url="https://youtube.com"
+           data-icon-type="auto"
+           data-icon-value=""
+           target="_blank">
+            <img class="icon">
+            <div class="text-group">
+                <p class="item-title">YouTube</p>
+                <p class="item-desc">Videos, tutorials, entertainment.</p>
+            </div>
+        </a>
+
+        <a class="link-item"
+           data-title="Google"
+           data-desc="Search anything across the web."
+           data-url="https://google.com"
+           data-icon-type="auto"
+           data-icon-value=""
+           target="_blank">
+            <img class="icon">
+            <div class="text-group">
+                <p class="item-title">Google</p>
+                <p class="item-desc">Search anything across the web.</p>
+            </div>
+        </a>
+
+    </div>
+
+</div>
+
+<script>
+    /* ICON LOADER SYSTEM */
+    document.querySelectorAll(".link-item").forEach(item => {
+        const type = item.getAttribute("data-icon-type");
+        const value = item.getAttribute("data-icon-value");
+        const url   = item.getAttribute("data-url");
+        const img   = item.querySelector(".icon");
+
+        if (type === "auto") {
+            img.src = value && value.length > 2 ? value : autoFavicon(url);
+        }
+
+        else if (type === "url") {
+            img.src = value;
+        }
+
+        else if (type === "path") {
+            img.src = value;
+        }
+    });
+
+    /* MAKE ENTIRE CARD CLICKABLE */
+    document.querySelectorAll(".link-item").forEach(item => {
+        item.addEventListener("click", () => {
+            const url = item.getAttribute("data-url");
+            if (url) window.open(url, "_blank");
+        });
+    });
+
+    /* SEARCH BAR */
+    const searchInput = document.getElementById("searchInput");
+    const cards = document.querySelectorAll(".link-item");
+
+    searchInput.addEventListener("input", () => {
+        const value = searchInput.value.toLowerCase();
+
+        cards.forEach(card => {
+            const t = card.getAttribute("data-title").toLowerCase();
+            const d = card.getAttribute("data-desc").toLowerCase();
+
+            card.style.display =
+                t.includes(value) || d.includes(value)
+                ? "flex"
+                : "none";
+        });
+    });
+</script>
+
+</body>
+  </html>
